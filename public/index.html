@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TaskMaster Pro</title>
+    <style>
+        :root { --brown: #8b5e34; --danger: #a03c3c; --edit: #d4a373; --check: #1e7a93; --plus: #2d8a4e; --done: #5c8d89; }
+        body { font-family: "Eczar", serif; background: #fdfbf7; padding: 40px; }
+        .hidden { display: none !important; }
+        .card { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border: 1px solid #ccc; text-align: center; position: relative; }
+        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        .input-wrapper { position: relative; }
+        .eye-icon { position: absolute; right: 10px; top: 20px; cursor: pointer; user-select: none; }
+        .back-btn { position: absolute; top: 10px; left: 10px; background: none; border: 1px solid var(--brown); color: var(--brown); padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+        .auth-btns { display: flex; gap: 10px; margin-top: 10px; }
+        .auth-btns button { flex: 1; padding: 10px; cursor: pointer; border: none; color: white; }
+        #todo-section { max-width: 600px; margin: auto; }
+        .logout-btn { background: var(--danger); color: white; padding: 10px 20px; border: none; cursor: pointer; float: right; }
+        .tabs { display: flex; gap: 15px; margin-bottom: 30px; }
+        .tabs button { background: var(--brown); color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 6px; }
+        .task-card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #ccc; }
+        .task-text { flex-grow: 1; margin-right: 15px; }
+        .btn-group { display: flex; gap: 5px; }
+        .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; margin-left: 5px; }
+        .btn-edit { background: var(--edit); }
+        .btn-delete { background: var(--danger); }
+        .btn-done { background: var(--done); }
+        .btn-save { background: var(--check); }
+        .btn-add { background: var(--plus); color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 6px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div id="login-section" class="card">
+    <h2>TaskMaster</h2>
+    <input type="text" id="email" placeholder="Email">
+    <div class="input-wrapper">
+        <input type="password" id="password" placeholder="Password">
+        <span class="eye-icon" onclick="togglePass('password')">👁️</span>
+    </div>
+    <div class="auth-btns">
+        <button onclick="auth('login')" style="background:var(--brown);">Login</button>
+        <button onclick="auth('signup')" style="background:var(--edit);">Sign Up</button>
+    </div>
+    <p onclick="showSection('forgot-section')" style="cursor:pointer; color:blue; margin-top:15px;">Forgot Password?</p>
+</div>
+
+<div id="forgot-section" class="card hidden">
+    <button class="back-btn" onclick="showSection('login-section')">← Back</button>
+    <h2>Change Password</h2>
+    <input type="text" id="fp-email" placeholder="Email">
+    <div class="input-wrapper">
+        <input type="password" id="old-pass" placeholder="Old Password">
+        <span class="eye-icon" onclick="togglePass('old-pass')">👁️</span>
+    </div>
+    <div class="input-wrapper">
+        <input type="password" id="new-pass" placeholder="New Password">
+        <span class="eye-icon" onclick="togglePass('new-pass')">👁️</span>
+    </div>
+    <button onclick="changePassword()" style="background:var(--brown); width:100%; color:white; border:none; padding:10px;">Update Password</button>
+</div>
+
+<div id="todo-section" class="hidden">
+    <button onclick="logout()" class="logout-btn">Logout</button>
+    <div class="tabs">
+        <button onclick="filterTodos('all')">All</button>
+        <button onclick="filterTodos('ongoing')">Ongoing</button>
+        <button onclick="filterTodos('completed')">Done</button>
+    </div>
+    <h2>My Tasks</h2>
+    <button class="btn-add" onclick="addNewTodoField()">+ Add New Task</button>
+    <div id="todos-list"></div>
+</div>
+
+<script>
+    let allTasks = [];
+    let currentFilter = 'all';
+
+    function showSection(id) {
+        document.querySelectorAll('#login-section, #forgot-section, #todo-section').forEach(el => el.classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function togglePass(id) {
+        const input = document.getElementById(id);
+        input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    async function auth(type) {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const res = await fetch(`http://localhost:3000/users/${type}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email, password})
+        });
+        const data = await res.json();
+        if (data.token || data.user) {
+            if(type === 'signup') { await auth('login'); }
+            else { localStorage.setItem('token', data.token); showSection('todo-section'); loadTodos(); }
+        } else alert(data.message || "Operation failed");
+    }
+
+    async function changePassword() {
+        const email = document.getElementById('fp-email').value;
+        const oldPassword = document.getElementById('old-pass').value;
+        const newPassword = document.getElementById('new-pass').value;
+        const res = await fetch(`http://localhost:3000/users/${email}/change-password`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({oldPassword, newPassword})
+        });
+        if (res.ok) { alert("Password updated successfully!"); showSection('login-section'); }
+        else { const err = await res.json(); alert(err.message || "Failed."); }
+    }
+
+    function logout() { localStorage.removeItem('token'); showSection('login-section'); }
+
+    function addNewTodoField() {
+        const list = document.getElementById('todos-list');
+        const div = document.createElement('div');
+        div.className = 'task-card';
+        div.innerHTML = `<input type="text" id="new-todo-input" placeholder="Enter task..." oninput="this.nextElementSibling.classList.toggle('hidden', !this.value)"><button class="hidden btn btn-save" onclick="saveNewTask()">✓</button>`;
+        list.appendChild(div);
+    }
+
+    async function saveNewTask() {
+        const title = document.getElementById('new-todo-input').value;
+        await fetch('http://localhost:3000/todos', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}`},
+            body: JSON.stringify({ title })
+        });
+        loadTodos();
+    }
+
+    function makeEditable(id, span) {
+        span.parentElement.innerHTML = `<input type="text" id="edit-${id}" value="${span.innerText}" oninput="document.getElementById('save-edit-${id}').classList.toggle('hidden', !this.value)"><button id="save-edit-${id}" class="btn btn-save" onclick="updateTask('${id}')">✓</button>`;
+    }
+
+    async function updateTask(id) {
+        const title = document.getElementById(`edit-${id}`).value;
+        await fetch(`http://localhost:3000/todos/${id}`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}`},
+            body: JSON.stringify({ title })
+        });
+        loadTodos();
+    }
+
+    async function deleteTask(id) {
+        await fetch(`http://localhost:3000/todos/${id}`, {
+            method: 'DELETE',
+            headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}
+        });
+        loadTodos();
+    }
+
+    // الدالة المحدثة التي تأكدنا منها
+    async function toggleDone(id) {
+        await fetch(`http://localhost:3000/todos/${id}/complete`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}`}
+        });
+        await loadTodos();
+    }
+
+    async function loadTodos() {
+        const res = await fetch('http://localhost:3000/todos', {
+            headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}
+        });
+        const data = await res.json();
+        allTasks = data.data;
+        filterTodos(currentFilter);
+    }
+
+    function filterTodos(filter) {
+        currentFilter = filter;
+        let filtered = allTasks;
+        if (filter === 'ongoing') filtered = allTasks.filter(t => !t.isCompleted);
+        if (filter === 'completed') filtered = allTasks.filter(t => t.isCompleted);
+
+        document.getElementById('todos-list').innerHTML = filtered.map(t => `
+            <div class="task-card">
+                <span class="task-text">${t.title}</span>
+                <div class="btn-group">
+                    ${!t.isCompleted ? `<button class="btn btn-done" onclick="toggleDone('${t.id}')">Done</button>` : ''}
+                    <button class="btn btn-edit" onclick="makeEditable('${t.id}', this.parentElement.previousElementSibling)">Edit</button>
+                    <button class="btn btn-delete" onclick="deleteTask('${t.id}')">Delete</button>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    window.onload = () => { if(localStorage.getItem('token')) { showSection('todo-section'); loadTodos(); } };
+</script>
+</body>
+</html>
