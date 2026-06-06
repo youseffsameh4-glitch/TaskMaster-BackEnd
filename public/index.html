@@ -73,6 +73,7 @@
 </div>
 
 <script>
+     const API_URL = "https://fasting-puppet-enforced.ngrok-free.dev";
     let allTasks = [];
     let currentFilter = 'all';
 
@@ -89,7 +90,8 @@
     async function auth(type) {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
-        const res = await fetch(`http://localhost:3000/users/${type}`, {
+       
+        const res = await fetch(`${API_URL}/users/${type}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({email, password})
@@ -105,7 +107,7 @@
         const email = document.getElementById('fp-email').value;
         const oldPassword = document.getElementById('old-pass').value;
         const newPassword = document.getElementById('new-pass').value;
-        const res = await fetch(`http://localhost:3000/users/${email}/change-password`, {
+        const res = await fetch(`${API_URL}/users/${email}/change-password`, {
             method: 'PATCH',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({oldPassword, newPassword})
@@ -126,7 +128,7 @@
 
     async function saveNewTask() {
         const title = document.getElementById('new-todo-input').value;
-        await fetch('http://localhost:3000/todos', {
+        await fetch(`${API_URL}/todos`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}`},
             body: JSON.stringify({ title })
@@ -140,7 +142,7 @@
 
     async function updateTask(id) {
         const title = document.getElementById(`edit-${id}`).value;
-        await fetch(`http://localhost:3000/todos/${id}`, {
+        await fetch(`${API_URL}/todos/${id}`, {
             method: 'PATCH',
             headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}`},
             body: JSON.stringify({ title })
@@ -149,7 +151,7 @@
     }
 
     async function deleteTask(id) {
-        await fetch(`http://localhost:3000/todos/${id}`, {
+        await fetch(`${API_URL}/todos/${id}`, {
             method: 'DELETE',
             headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}
         });
@@ -158,7 +160,7 @@
 
     // الدالة المحدثة التي تأكدنا منها
     async function toggleDone(id) {
-        await fetch(`http://localhost:3000/todos/${id}/complete`, {
+        await fetch(`${API_URL}/todos/${id}/complete`, {
             method: 'PATCH',
             headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}`}
         });
@@ -166,7 +168,7 @@
     }
 
     async function loadTodos() {
-        const res = await fetch('http://localhost:3000/todos', {
+        const res = await fetch(`${API_URL}/todos`, {
             headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}
         });
         const data = await res.json();
@@ -194,5 +196,7 @@
 
     window.onload = () => { if(localStorage.getItem('token')) { showSection('todo-section'); loadTodos(); } };
 </script>
+//btw this is a free server and i made a tunnel from my labtop so the only way to see the website i have to open the labtob and server if u want to inform me other than that u can check the physical code on github.
+
 </body>
 </html>
